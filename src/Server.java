@@ -6,22 +6,36 @@ import java.net.Socket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.SocketException;
-
+import java.util.ArrayList;
 
 public class Server {
 
-	ServerSocket serverSocket;
-	Socket clientSocket;
-	PrintWriter out;
-	BufferedReader in;
-	boolean clientInput = true;
-	ReplyState state = ReplyState.NEXT;
-	
+	private ServerSocket serverSocket;
+	private Socket clientSocket;
+	private PrintWriter out;
+	private BufferedReader in;
+	private boolean clientInput = true;
+	private ReplyState state = ReplyState.NEXT;
+	private ArrayList<Account> clients;	
 	private enum ReplyState
 	{
 		INIT, NEXT, DATA, QUIT
 	}
-	void receiveConnection()
+	
+	/*
+	 * Initializes the server with two user accounts and begins listening on port 25
+	 */
+	public Server()
+	{
+		clients = new ArrayList<Account>();
+		clients.add(new Account("pauledangerously1", "abcgum"));
+		clients.add(new Account("markramasco", "sillyface"));
+
+
+			receiveConnection();
+	}
+	
+	private void receiveConnection()
 	{
 
 		/*
@@ -33,7 +47,7 @@ public class Server {
 		    System.out.println("Could not listen on port: 25");
 		    System.exit(-1);
 		}
-		
+		while(true){
 		/*
 		 * Client specific socket
 		 * open reader write for socket
@@ -90,13 +104,14 @@ public class Server {
 		//close socket
 		socketClose();
 		System.out.println("Connection closed");
+		}
 	}
-	void socketClose()
+	private void socketClose()
 	{
 		//close socket
 		try {
 			clientSocket.close();
-			serverSocket.close();
+			//serverSocket.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -106,7 +121,7 @@ public class Server {
 	/*
 	 * State Machine to parse commands and reply with proper Reply code
 	 */
-	public String messageFSM(String message)
+	private String messageFSM(String message)
 	{
 		//reply codes
 		String OK = "250";
@@ -169,6 +184,5 @@ public class Server {
 	public static void main(String[] args)
 	{
 		Server s = new Server();
-		s.receiveConnection();
 	}
 }
