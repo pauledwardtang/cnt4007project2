@@ -19,7 +19,7 @@ public class Server {
 	private ArrayList<Account> clients;	
 	private enum ReplyState
 	{
-		INIT, NEXT, DATA, QUIT
+		AUTH, INIT, NEXT, DATA, QUIT
 	}
 	
 	/*
@@ -48,62 +48,62 @@ public class Server {
 		    System.exit(-1);
 		}
 		while(true){
-		/*
-		 * Client specific socket
-		 * open reader write for socket
-		 */
-		clientSocket = null;
-		try {
-		    clientSocket = serverSocket.accept();
-			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			out = new PrintWriter(
-			        clientSocket.getOutputStream(), true);
-		    System.out.println("Accepted client socket: " + clientSocket.getRemoteSocketAddress().toString());
-		} catch (IOException e) {
-		    System.out.println("Accept failed: 25");
-		    System.exit(-1);
-		}
-		
-		/*
-		 * input commands
-		 */
-		try {
-			//connection accepted message
-			out.println("220 " + clientSocket.getLocalAddress() );
-			while(!(state == ReplyState.QUIT))
-			{
-				String fromClient = in.readLine();				
-				if(fromClient == null){}
-						
-				else if(fromClient != null)
+			/*
+			 * Client specific socket
+			 * open reader write for socket
+			 */
+			clientSocket = null;
+			try {
+				clientSocket = serverSocket.accept();
+				in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+				out = new PrintWriter(
+						clientSocket.getOutputStream(), true);
+				System.out.println("Accepted client socket: " + clientSocket.getRemoteSocketAddress().toString());
+			} catch (IOException e) {
+				System.out.println("Accept failed: 25");
+				System.exit(-1);
+			}
+			
+			/*
+			 * input commands
+			 */
+			try {
+				//connection accepted message
+				out.println("220 " + clientSocket.getLocalAddress() );
+				while(!(state == ReplyState.QUIT))
 				{
-					if(state == ReplyState.NEXT)
+					String fromClient = in.readLine();				
+					if(fromClient == null){}
+							
+					else if(fromClient != null)
 					{
-						out.println(messageFSM(fromClient));
-					}
-					else if(state == ReplyState.DATA)
-					{
-						if(fromClient.equals("."))
+						if(state == ReplyState.NEXT || state == ReplyState.AUTH)
 						{
 							out.println(messageFSM(fromClient));
-						}		
+						}
+						else if(state == ReplyState.DATA)
+						{
+							if(fromClient.equals("."))
+							{
+								out.println(messageFSM(fromClient));
+							}		
+						}
+						System.out.println(fromClient);
 					}
-					System.out.println(fromClient);
+
 				}
-
+			} catch (SocketException e) {
+				socketClose();
+				e.printStackTrace();
+			} catch (IOException e) {
+				socketClose();
+				e.printStackTrace();
 			}
-		} catch (SocketException e) {
-			socketClose();
-			e.printStackTrace();
-		} catch (IOException e) {
-			socketClose();
-			e.printStackTrace();
-		}
 
-		//close sockets
-		//close socket
-		socketClose();
-		System.out.println("Connection closed");
+			//close sockets
+			//close socket
+			socketClose();
+			System.out.println("Connection closed");
 		}
 	}
 	private void socketClose()
@@ -178,6 +178,18 @@ public class Server {
 			reply = OK + " Message Accepted.";
 			state = ReplyState.NEXT;
 			break;
+		
+		case AUTH: 
+			if(command.equals("AUTH"))
+			{
+				String[] authInput = new String[2]; 
+				//Should split up the message into {op, username, password}
+				authInput = message.split("s");  //"s" means we are splitting based on whitespace
+				if(clients.contains(new Account(authInput[1], authInput[2]))) //Check arrayList for Account with given username, password
+					reply = OK + "Authentication verified";
+				else 
+					reply = WRONG + "Authentication failed";
+			}
 		}
 		return reply;
 	}
