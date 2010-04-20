@@ -13,9 +13,9 @@
 	private   String username;
 	private   String password;
 	
-	public Account(String name, String password)
+	public Account(String username, String password)
 	{
-		this.name = name;
+		this.username = username;
 		this.password = password;
 	}	
 	
