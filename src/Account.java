@@ -10,13 +10,23 @@
 */
  public class Account
 {
-	private   String name;
-	protected String password;
+	private   String username;
+	private   String password;
 	
 	public Account(String name, String password)
 	{
 		this.name = name;
 		this.password = password;
 	}	
+	
+	String getUserName()
+	{
+		return username;
+	}
+	
+	String getPassword()
+	{
+		return password;
+	}
 	
 }
