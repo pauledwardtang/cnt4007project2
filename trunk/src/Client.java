@@ -17,7 +17,7 @@ import java.lang.Math;
 	private enum SMTP_State { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH }
 
 	//IP Addresses for the servers
-	String SERVER1_IP = "10.128.12.67";
+	String SERVER1_IP = "192.168.2.10";
 	String SERVER2_IP = "127.0.0.1";
 
 	private Socket socket, authenticationSocket;
