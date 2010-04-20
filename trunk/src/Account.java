@@ -13,8 +13,10 @@
 	private   String name;
 	protected String password;
 	
-	public Account()
+	public Account(String name, String password)
 	{
+		this.name = name;
+		this.password = password;
 	}	
 	
 }
