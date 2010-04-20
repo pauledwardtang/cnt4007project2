@@ -28,7 +28,7 @@ public class Server {
 	public Server()
 	{
 		clients = new ArrayList<Account>();
-		clients.add(new Account("pauledangerously1", "abcgum"));
+		clients.add(new Account("paultang", "sillyface"));
 		clients.add(new Account("markramasco", "sillyface"));
 
 
@@ -145,6 +145,22 @@ public class Server {
 			{
 				reply = OK + " Hello " + clientSocket.getRemoteSocketAddress() + ".";
 			}
+			else if(command.equals("AUTH"))
+			{
+				String[] authInput; 
+				//Should split up the message into {op, username, password}
+				authInput = message.split("\\s+");  //"s" means we are splitting based on whitespace
+				System.out.println("------------");
+				for (int i = 0 ; i < authInput.length ; i++) {
+					System.out.println(authInput[i]);
+				}
+				System.out.println("------------");
+
+				//if(clients.contains(new Account(authInput[1], authInput[2]))) //Check arrayList for Account with given username, password
+				//	reply = OK + "Authentication verified";
+				//else 
+					reply = WRONG + "Authentication failed";
+			}
 			//Data section, change state machine to take in data till .
 			else if(command.equals("DATA"))
 			{
@@ -178,18 +194,6 @@ public class Server {
 			reply = OK + " Message Accepted.";
 			state = ReplyState.NEXT;
 			break;
-		
-		case AUTH: 
-			if(command.equals("AUTH"))
-			{
-				String[] authInput = new String[2]; 
-				//Should split up the message into {op, username, password}
-				authInput = message.split("s");  //"s" means we are splitting based on whitespace
-				if(clients.contains(new Account(authInput[1], authInput[2]))) //Check arrayList for Account with given username, password
-					reply = OK + "Authentication verified";
-				else 
-					reply = WRONG + "Authentication failed";
-			}
 		}
 		return reply;
 	}
