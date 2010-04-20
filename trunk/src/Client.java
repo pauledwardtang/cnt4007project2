@@ -20,7 +20,7 @@ private enum SMTP_State { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH }
 String SERVER1_IP = "10.128.82.162";
 String SERVER2_IP = "127.0.0.1";
 
-private Socket socket;
+private Socket socket, authenticationSocket;
 private String receiver_email_address, sender_email_address;
 private String subject;
 private String message_body;
@@ -46,8 +46,7 @@ private SMTP_State state;
 				 
 		rand = new Random();
 		state = SMTP_State.HELO;
-		System.out.println("Constructing email...");
-		constructSocket();
+		//constructSocket();
 	}
 
 //---********Functions*********---
@@ -60,9 +59,15 @@ private SMTP_State state;
 void constructSocket(){
 		try{
 			if(Math.round(rand.nextFloat()) == 0) //Set IP to server 1
+			{
 				socket = new Socket(SERVER1_IP, 25);
+				authenticationSocket = new Socket(SERVER1_IP, 4444);
+			}
 			else
+			{
 				socket = new Socket(SERVER1_IP, 25);
+				authenticationSocket = new Socket(SERVER1_IP, 4444);
+			}
 				
 		
 		// Creating readers/writers
@@ -92,9 +97,53 @@ void displayMenu(){
  */
 void getUserInput(){
 		//Buffered writer for reading input from user
-		BufferedReader writer = new BufferedReader(new InputStreamReader(System.in));
+		String authentication;
+		String retryTemp;
+		boolean retry = false;
+		boolean authFlag = false;
+		try
+		{
+			do
+			{
+				BufferedReader writer = new BufferedReader(new InputStreamReader(System.in));
+				
+				System.out.print("Username: ");
+				authentication = writer.readLine() + " ";
+				
+				System.out.print("Password: ");
+				authentication.concat(writer.readLine());
+				System.out.println();
+				
+				authFlag = sendAuthentication(authentication);
+				if(authFlag == false)
+				{
+					System.out.println("Authentication error! Exit(e) or Retry(r)?");
+					retryTemp = writer.readLine();
+					
+					if(retryTemp.equals("r"))
+						retry = true;
+					else if(retryTemp.equals("e"))
+					{
+						retry = false;
+						System.exit(0);
+					}
+				}
+				
+			}while(retry);
+			
+		}catch(IOException e){
+			System.out.println(e);
+		}
 }
-   
+
+ /*
+  *    Send authentication data to the server
+  *
+  */
+boolean sendAuthentication(String auth)
+{
+		return false;
+}
 
  /*
   *    Construct an email message using MIME. Alternatively, could push out one line at a time to the server so we can avoid parsing
