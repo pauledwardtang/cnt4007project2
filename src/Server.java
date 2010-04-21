@@ -15,11 +15,11 @@ public class Server {
 	private PrintWriter out;
 	private BufferedReader in;
 	private boolean clientInput = true;
-	private ReplyState state = ReplyState.NEXT;
+	private ReplyState state = ReplyState.AUTH;
 	private ArrayList<Account> clients;	
 	private enum ReplyState
 	{
-		AUTH, INIT, NEXT, DATA, QUIT
+		AUTH, INIT, NEXT, DATA, QUIT, REDY
 	}
 	
 	/*
@@ -69,7 +69,6 @@ public class Server {
 			 */
 			try {
 				//connection accepted message
-				out.println("220 " + clientSocket.getLocalAddress() );
 				while(!(state == ReplyState.QUIT))
 				{
 					String fromClient = in.readLine();				
@@ -77,7 +76,7 @@ public class Server {
 							
 					else if(fromClient != null)
 					{
-						if(state == ReplyState.NEXT || state == ReplyState.AUTH)
+						if(state == ReplyState.NEXT || state == ReplyState.AUTH || state == ReplyState.REDY)
 						{
 							out.println(messageFSM(fromClient));
 						}
@@ -113,7 +112,6 @@ public class Server {
 			clientSocket.close();
 			//serverSocket.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -145,22 +143,7 @@ public class Server {
 			{
 				reply = OK + " Hello " + clientSocket.getRemoteSocketAddress() + ".";
 			}
-			else if(command.equals("AUTH"))
-			{
-				String[] authInput; 
-				//Should split up the message into {op, username, password}
-				authInput = message.split("\\s+");  //"s" means we are splitting based on whitespace
-				System.out.println("------------");
-				for (int i = 0 ; i < authInput.length ; i++) {
-					System.out.println(authInput[i]);
-				}
-				System.out.println("------------");
 
-				//if(clients.contains(new Account(authInput[1], authInput[2]))) //Check arrayList for Account with given username, password
-				//	reply = OK + "Authentication verified";
-				//else 
-					reply = WRONG + "Authentication failed";
-			}
 			//Data section, change state machine to take in data till .
 			else if(command.equals("DATA"))
 			{
@@ -194,6 +177,53 @@ public class Server {
 			reply = OK + " Message Accepted.";
 			state = ReplyState.NEXT;
 			break;
+		case AUTH:
+			command = message.substring(0, 4);
+			if(command.equals("AUTH"))
+			{
+				String[] authInput; 
+				boolean accepted = false;
+				//Should split up the message into {op, username, password}
+				authInput = message.split("\\s+");  //"\\s" means we are splitting based on whitespace
+				System.out.println("------------");
+				for (int i = 0 ; i < clients.size(); i++) {
+					System.out.println(authInput[i]);
+					Account temp = clients.get(i);
+					//check usernames
+					if(temp.getUserName().equals(authInput[1]) && temp.getPassword().equals(authInput[2]))
+					{
+						reply = "777 " + "Login Accepted";
+						
+						state = ReplyState.REDY;
+						accepted = true;
+						break;
+					}
+				}
+				//no login or incorrect password
+				if(!accepted)
+				{
+					reply = "666 " + "Login Failed";
+				}
+				System.out.println("------------");
+				
+			}
+			else
+				reply = "666 " + "Login First";
+			break;
+		//
+		case REDY:
+			command = message.substring(0, 4);
+			if(command.equals("REDY"))
+			{
+				state = ReplyState.NEXT;
+				reply = "220 " + "Hello " + clientSocket.getRemoteSocketAddress();
+			}
+			else
+			{
+				reply = "503 " + " Waiting for email";
+			}
+			break;
+			
 		}
 		return reply;
 	}
