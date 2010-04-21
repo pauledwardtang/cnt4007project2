@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.SocketException;
 import java.util.ArrayList;
 
+
 public class Server {
 
 	private ServerSocket serverSocket;
@@ -15,13 +16,21 @@ public class Server {
 	private PrintWriter out;
 	private BufferedReader in;
 	private boolean clientInput = true;
-	private ReplyState state = ReplyState.AUTH;
+	private ReplyState state;
+	private int currentRecipient;
 	private ArrayList<Account> clients;	
+	String SERVER1_IP = "10.128.83.19";
+	String SERVER2_IP = "10.128.83.21";
+	private SMTP_clientState clientState = SMTP_clientState.HELO;
+	String sender = null;
+	String recip = null;
+	String MIME = null;
+
 	private enum ReplyState
 	{
-		AUTH, INIT, NEXT, DATA, QUIT, REDY, FORWARD
+		AUTH, INIT, NEXT, DATA, QUIT, REDY, FORWARD, RETRIEVE
 	}
-	
+	private enum SMTP_clientState  { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH ,DONE}
 	/*
 	 * Initializes the server with two user accounts and begins listening on port 25
 	 */
@@ -30,6 +39,7 @@ public class Server {
 		clients = new ArrayList<Account>();
 		clients.add(new Account("paultang", "sillyface"));
 		clients.add(new Account("markramasco", "sillyface"));
+		clients.add(new Account("server1", "pass123"));
 
 
 			receiveConnection();
@@ -42,9 +52,9 @@ public class Server {
 		 * Always open server socket
 		 */
 		try {
-		    serverSocket = new ServerSocket(25);
+		    serverSocket = new ServerSocket(4444);
 		} catch (IOException e) {
-		    System.out.println("Could not listen on port: 25");
+		    System.out.println("Could not listen on port: 4444");
 		    System.exit(-1);
 		}
 		while(true){
@@ -58,6 +68,16 @@ public class Server {
 				in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 				out = new PrintWriter(
 						clientSocket.getOutputStream(), true);
+				if(clientSocket.getRemoteSocketAddress().toString().equals(SERVER1_IP) 
+				   || clientSocket.getRemoteSocketAddress().toString().equals(SERVER2_IP))
+				{
+					out.println("220 " + clientSocket.getLocalAddress());
+					state = ReplyState.NEXT;
+				}
+				else
+				{
+					state = ReplyState.AUTH;
+				}
 				System.out.println("Accepted client socket: " + clientSocket.getRemoteSocketAddress().toString());
 			} catch (IOException e) {
 				System.out.println("Accept failed: 25");
@@ -76,37 +96,17 @@ public class Server {
 							
 					else if(fromClient != null)
 					{
-						if(state == ReplyState.NEXT || state == ReplyState.AUTH )
-						{
-							String t = messageFSM(fromClient);
-						//	out.println(messageFSM(fromClient));
-							out.println(t);
-							System.out.println(t);
-						}
-						else if(state == ReplyState.DATA)
-						{
-							if(fromClient.equals("."))
-							{
-								out.println(messageFSM(fromClient));
-							}		
-						}
-						else if(state == ReplyState.REDY)
-						{
-							if(fromClient.equals("SEND"))
-							{
-								out.println(messageFSM(fromClient));
-							}
-						}
+						messageFSM(fromClient);
 						System.out.println(fromClient);
 					}
 					if(clientSocket.isConnected())
 					{
-						System.out.println("yes");
-						System.out.println("state: " +state.toString());
+						//System.out.println("yes");
+						//System.out.println("state: " +state.toString());
 					}
 					else
 					{
-						System.out.println("no");
+						//System.out.println("no");
 					}
 				}
 			} catch (SocketException e) {
@@ -149,6 +149,7 @@ public class Server {
 		//reply code and message
 		String reply = null;
 		String command = null;
+
 		
 		
 		switch(state)
@@ -166,6 +167,7 @@ public class Server {
 			//Data section, change state machine to take in data till .
 			else if(command.equals("DATA"))
 			{
+				
 				state = ReplyState.DATA;
 				reply = DATA + " Enter email.";
 			}
@@ -173,10 +175,24 @@ public class Server {
 			else if(command.equals("MAIL"))
 			{
 				reply = OK + " Sender OK.";
+				String[] sender;
+				sender = message.split(": ");
 			}
 			//mail recipient, store <rcpt>
 			else if(command.equals("RCPT"))
 			{
+				String[] recip;
+				recip = message.split(": ");
+				//String recipient = recip[1];
+				for (int i = 0 ; i < clients.size(); i++)
+				{
+					Account temp = clients.get(i);
+					if(temp.getUserName().equals(recip[1]))
+					{
+						
+					}
+				}
+				System.out.println(recip[1]);
 				reply = OK + " Enter email.";
 			}
 			//email transaction done, send quit reply
@@ -190,11 +206,21 @@ public class Server {
 			{
 				reply = WRONG + " Incorrect command.";
 			}
+			out.println(reply);
 			break;
 		case DATA:
-			//command message parsed from message
-			reply = OK + " Message Accepted.";
-			state = ReplyState.NEXT;
+
+			if(message.equals("."))
+			{
+				reply = OK + " Message Accepted.";
+				System.out.println(MIME);
+				state = ReplyState.NEXT;
+				out.println(reply);
+			}		
+			else
+			{
+				MIME += message;
+			}
 			break;
 		case AUTH:
 			command = message.substring(0, 4);
@@ -226,16 +252,160 @@ public class Server {
 				
 			}
 			else
+			{
 				reply = "666 " + "Login First";
+			}
+			out.println(reply);
 			break;
 		//
 		case REDY:
 			command = message.substring(0, 4);
-			state = ReplyState.NEXT;
-			reply = "220 " + clientSocket.getLocalAddress();
+			if(command.equals("SEND"))
+			{
+				reply = "220 " + clientSocket.getLocalAddress();
+				out.println(reply);
+				state = ReplyState.NEXT;
+			}
+			else if(command.equals("RECV"))
+			{
+				
+			}
+			else if(command.equals("AUTH"))
+			{
+				state = ReplyState.AUTH;
+			}
 			break;
 		}
 		return reply;
+	}
+	 /*
+	  *    Send a message to the server
+	  *
+	  */
+	void sendToServer(){
+		
+	
+		String replyCode;
+		
+		while(clientState != SMTP_clientState.DONE)
+		try
+		{
+			replyCode = in.readLine();
+			if(replyCode != null)
+			{
+				System.out.println(replyCode);
+				switch(clientState)
+				{
+				case HELO:	//Verify the initial TCP connection, send reply
+					System.out.println("clientState = HELO");
+					if(replyCode.substring(0,3).equals("220"))
+					{
+						clientState = SMTP_clientState.MAIL;
+						out.println("HELO" + clientSocket.getLocalAddress());
+						System.out.println("HELO" + clientSocket.getLocalAddress());
+					}
+					else
+					{
+						System.out.println("Error, connection not established.\n" + replyCode);
+						clientState = SMTP_clientState.DONE;
+					}
+					break;
+							
+				case MAIL: //Wait for HELO response
+					System.out.println("clientState = MAIL");
+					if(replyCode.substring(0,3).equals("250"))
+					{
+						clientState = SMTP_clientState.RCPT;
+						System.out.println("MAIL FROM: " + sender);
+						out.println("MAIL FROM: " + sender);
+					}
+					else
+					{
+						System.out.println("Error in HELO response.\n" + replyCode);
+						clientState = SMTP_clientState.DONE;
+					}
+					break;
+						
+				case RCPT: 				
+					System.out.println("clientState = RCPT");
+					if(replyCode.substring(0,3).equals("250"))
+					{
+						clientState = SMTP_clientState.DATA;
+						System.out.println("RCPT TO: " + recip);
+						out.println("RCPT TO: " + recip);
+					}
+					else
+					{
+						System.out.println("Error in MAIL response.\n" + replyCode);
+						clientState = SMTP_clientState.DONE;
+					}
+					break;
+							
+				case DATA: //Wait for recipient ok response before sending data
+					System.out.println("clientState = DATA");
+					if(replyCode.substring(0,3).equals("250"))
+					{
+						clientState = SMTP_clientState.MESSAGE;
+						out.println("DATA");
+					}
+					else
+					{
+						System.out.println("Error in RCPT response: \n" + replyCode);
+						clientState = SMTP_clientState.DONE;
+					}
+					break;
+						
+				case MESSAGE: //Send formatted message
+					System.out.println("clientState = MESSAGE");
+					if(replyCode.substring(0,3).equals("354"))
+					{
+						clientState = SMTP_clientState.QUIT;
+						out.println(MIME);
+						out.println(".");
+						System.out.println(".");
+					}
+					else
+					{
+						System.out.println("Error in DATA response: \n" + replyCode);
+						clientState = SMTP_clientState.DONE;
+					}
+					break;
+					
+				case QUIT: //Send formatted message
+					System.out.println("clientState = QUIT");
+					if(replyCode.substring(0,3).equals("250"))
+					{
+						clientState = SMTP_clientState.FINISH;
+						out.println("QUIT");
+					}
+					else
+					{
+						System.out.println("Error in MESSAGE response.");
+						clientState = SMTP_clientState.DONE;
+					}
+					break;
+						
+				case FINISH: //Final message 
+					System.out.println("clientState = FINISH");
+					if(replyCode.substring(0,3).equals("221"))
+					{
+						clientState = SMTP_clientState.DONE;
+						out.println("QUIT");
+					}
+					else
+					{
+						System.out.println("Error in QUIT response.");
+						clientState = SMTP_clientState.DONE;
+					}
+					break;
+				case DONE: //When to close ports?
+					break;
+					
+				}
+			}
+		}catch(IOException e){
+			System.out.println(e);
+		}	
 	}
 	public static void main(String[] args)
 	{
