@@ -21,8 +21,8 @@ import java.lang.Integer;
 	private enum emailOptions{ SAVE, DELETE, GO_BACK, EXIT }
 	
 	//IP Addresses for the servers
-	String SERVER1_IP = "10.128.82.93";
-	String SERVER2_IP = "10.128.82.93";
+	String SERVER1_IP = "10.128.83.134";
+	String SERVER2_IP = "10.128.83.134";
 
 	private Socket socket, authenticationSocket;
 	private String receiver_email_address, sender_email_address;
@@ -202,7 +202,7 @@ import java.lang.Integer;
 									
 									
 								case 2:
-									out.println("PRNT: " + "test1");
+									out.println("PRNT: " + userName);
 									break;
 								
 								case 3:
