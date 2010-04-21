@@ -102,6 +102,7 @@ public class Server {
 			//close sockets
 			//close socket
 			socketClose();
+			state = ReplyState.AUTH;
 			System.out.println("Connection closed");
 		}
 	}
@@ -164,7 +165,7 @@ public class Server {
 			else if(command.equals("QUIT"))
 			{
 				reply = QUIT + " " + clientSocket.getLocalAddress() + " closing connection.";
-				state = ReplyState.QUIT;
+				state = ReplyState.REDY;
 			}
 			//incorrect code
 			else
@@ -192,8 +193,7 @@ public class Server {
 					//check usernames
 					if(temp.getUserName().equals(authInput[1]) && temp.getPassword().equals(authInput[2]))
 					{
-						reply = "777 " + "Login Accepted";
-						
+						reply = "777 " + "Login Accepted";		
 						state = ReplyState.REDY;
 						accepted = true;
 						break;
@@ -213,7 +213,7 @@ public class Server {
 		//
 		case REDY:
 			command = message.substring(0, 4);
-			if(command.equals("REDY"))
+			if(command.equals("SEND"))
 			{
 				state = ReplyState.NEXT;
 				reply = "220 " + "Hello " + clientSocket.getRemoteSocketAddress();
