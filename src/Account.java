@@ -14,12 +14,14 @@ import java.util.ArrayList;
 	private   String username;
 	private   String password;
 	private   ArrayList<Mail> inbox;
+	private   int count;
 	
 	public Account(String username, String password)
 	{
 		this.username = username;
 		this.password = password;
 		inbox = new ArrayList<Mail>();
+		count = 0;
 	}	
 	
 	public String getUserName()
@@ -37,9 +39,10 @@ import java.util.ArrayList;
 		return inbox;
 	}
 	
-	public void addMail(int mailNum, String subject, String message)
+	public void addMail(String message)
 	{
-		inbox.add(new Mail(mailNum, subject, message));
+		inbox.add(new Mail(count, message));
+		count++;
 	}
 	
 	public void deleteMail(int mailNum)
@@ -53,11 +56,16 @@ import java.util.ArrayList;
 		 public String subject;
 		 public int mailNum;
 		 
-		 private Mail(int mailNum, String subject, String message)
+		 private Mail(int mailNum, String message)
 		 {
 			 this.mailNum = mailNum;
-			 this.subject = subject;
 			 this.message = message;
+			 subject = parse(message);
+		 }
+		 //Fist latersc
+		 private String parse(String message)
+		 {
+			 return message;
 		 }
 		 
 	 }
