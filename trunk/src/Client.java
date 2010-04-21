@@ -16,7 +16,7 @@ import java.lang.Integer;
 	//---********Variables*********---
 
 	//Enumeration for SMTP State machine and menu options
-	private enum SMTP_State  { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH }
+	private enum SMTP_State  { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH ,DONE}
 	private enum menuOptions { SEND, RECEIVE,GO_BACK, EXIT }
 	private enum emailOptions{ SAVE, DELETE, GO_BACK, EXIT }
 	
@@ -172,13 +172,13 @@ import java.lang.Integer;
 							switch(choice)
 							{
 								case 1: //Gather user input for email structure
-									System.out.println("To: ");
+									System.out.print("To: ");
 									receiver_email_address = writer.readLine();
 																		 
-									System.out.println("From: ");
+									System.out.print("From: ");
 									sender_email_address = writer.readLine();
 									
-									System.out.println("Subject: ");
+									System.out.print("Subject: ");
 									subject = writer.readLine();
 									
 									System.out.println("Message Body");
@@ -191,8 +191,12 @@ import java.lang.Integer;
 											"Content-Transfer-Encoding: 7bit\n" +
 											"Content-Type: text/plain\r\n\n" +
 											message_body);
-
+									state = SMTP_State.HELO;
+									System.out.println("Socket Status: \nisConnected? : " + socket.isConnected() 
+													+  "\nisClosed?: " + socket.isClosed());
+									
 									out.println("SEND");
+									System.out.println("SEND, ENTERING SERVER COMMUNICATION PHASE");
 									sendToServer();
 									break;
 									
@@ -232,7 +236,7 @@ import java.lang.Integer;
 	
 		String replyCode;
 		
-		while(state != SMTP_State.FINISH)
+		while(state != SMTP_State.DONE)
 		try
 		{
 			replyCode = in.readLine();
@@ -242,6 +246,7 @@ import java.lang.Integer;
 				switch(state)
 				{
 				case HELO:	//Verify the initial TCP connection, send reply
+					System.out.println("STATE = HELO");
 					if(replyCode.substring(0,3).equals("220"))
 					{
 						state = SMTP_State.MAIL;
@@ -251,11 +256,12 @@ import java.lang.Integer;
 					else
 					{
 						System.out.println("Error, connection not established.\n" + replyCode);
-						state = SMTP_State.FINISH;
+						state = SMTP_State.DONE;
 					}
 					break;
 							
 				case MAIL: //Wait for HELO response
+					System.out.println("STATE = MAIL");
 					if(replyCode.substring(0,3).equals("250"))
 					{
 						state = SMTP_State.RCPT;
@@ -265,11 +271,12 @@ import java.lang.Integer;
 					else
 					{
 						System.out.println("Error in HELO response.\n" + replyCode);
-						state = SMTP_State.FINISH;
+						state = SMTP_State.DONE;
 					}
 					break;
 						
 				case RCPT: 				
+					System.out.println("STATE = RCPT");
 					if(replyCode.substring(0,3).equals("250"))
 					{
 						state = SMTP_State.DATA;
@@ -279,25 +286,26 @@ import java.lang.Integer;
 					else
 					{
 						System.out.println("Error in MAIL response.\n" + replyCode);
-						state = SMTP_State.FINISH;
+						state = SMTP_State.DONE;
 					}
 					break;
 							
 				case DATA: //Wait for recipient ok response before sending data
+					System.out.println("STATE = DATA");
 					if(replyCode.substring(0,3).equals("250"))
 					{
 						state = SMTP_State.MESSAGE;
 						out.println("DATA");
-						System.out.println("DATA");
 					}
 					else
 					{
 						System.out.println("Error in RCPT response: \n" + replyCode);
-						state = SMTP_State.FINISH;
+						state = SMTP_State.DONE;
 					}
 					break;
 						
 				case MESSAGE: //Send formatted message
+					System.out.println("STATE = MESSAGE");
 					if(replyCode.substring(0,3).equals("354"))
 					{
 						state = SMTP_State.QUIT;
@@ -307,29 +315,39 @@ import java.lang.Integer;
 					}
 					else
 					{
-						System.out.println("Error in RCPT response: \n" + replyCode);
-						state = SMTP_State.FINISH;
+						System.out.println("Error in DATA response: \n" + replyCode);
+						state = SMTP_State.DONE;
 					}
 					break;
 					
 				case QUIT: //Send formatted message
+					System.out.println("STATE = QUIT");
 					if(replyCode.substring(0,3).equals("250"))
 					{
 						state = SMTP_State.FINISH;
 						out.println("QUIT");
-						System.out.println("QUIT");
 					}
 					else
 					{
-						System.out.println("Error in RCPT response.");
-						state = SMTP_State.FINISH;
+						System.out.println("Error in MESSAGE response.");
+						state = SMTP_State.DONE;
 					}
 					break;
 						
-				case FINISH: //Close the socket
-					//socket.close();
-					//out.close();
-					//in.close();
+				case FINISH: //Final message 
+					System.out.println("STATE = FINISH");
+					if(replyCode.substring(0,3).equals("221"))
+					{
+						state = SMTP_State.DONE;
+						out.println("QUIT");
+					}
+					else
+					{
+						System.out.println("Error in QUIT response.");
+						state = SMTP_State.DONE;
+					}
+					break;
+				case DONE: //When to close ports?
 					break;
 					
 				}
@@ -342,7 +360,6 @@ import java.lang.Integer;
 		public static void main(String[] args)
 		{	
 				Client test = new Client();
-				test.getUserInput();	
-				//test.sendMIME(args[0], args[1], args[2], args[3]);
+				test.getUserInput();
 		}
 }
