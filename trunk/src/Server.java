@@ -19,7 +19,7 @@ public class Server {
 	private ArrayList<Account> clients;	
 	private enum ReplyState
 	{
-		AUTH, INIT, NEXT, DATA, QUIT, REDY
+		AUTH, INIT, NEXT, DATA, QUIT, REDY, FORWARD
 	}
 	
 	/*
@@ -76,9 +76,12 @@ public class Server {
 							
 					else if(fromClient != null)
 					{
-						if(state == ReplyState.NEXT || state == ReplyState.AUTH || state == ReplyState.REDY)
+						if(state == ReplyState.NEXT || state == ReplyState.AUTH )
 						{
-							out.println(messageFSM(fromClient));
+							String t = messageFSM(fromClient);
+						//	out.println(messageFSM(fromClient));
+							out.println(t);
+							System.out.println(t);
 						}
 						else if(state == ReplyState.DATA)
 						{
@@ -87,9 +90,24 @@ public class Server {
 								out.println(messageFSM(fromClient));
 							}		
 						}
+						else if(state == ReplyState.REDY)
+						{
+							if(fromClient.equals("SEND"))
+							{
+								out.println(messageFSM(fromClient));
+							}
+						}
 						System.out.println(fromClient);
 					}
-
+					if(clientSocket.isConnected())
+					{
+						System.out.println("yes");
+						System.out.println("state: " +state.toString());
+					}
+					else
+					{
+						System.out.println("no");
+					}
 				}
 			} catch (SocketException e) {
 				socketClose();
@@ -164,7 +182,7 @@ public class Server {
 			//email transaction done, send quit reply
 			else if(command.equals("QUIT"))
 			{
-				reply = QUIT + " " + clientSocket.getLocalAddress() + " closing connection.";
+				reply = QUIT + " " + clientSocket.getLocalAddress() + " Email Sent.";
 				state = ReplyState.REDY;
 			}
 			//incorrect code
@@ -213,17 +231,9 @@ public class Server {
 		//
 		case REDY:
 			command = message.substring(0, 4);
-			if(command.equals("SEND"))
-			{
-				state = ReplyState.NEXT;
-				reply = "220 " + "Hello " + clientSocket.getRemoteSocketAddress();
-			}
-			else
-			{
-				reply = "503 " + " Waiting for email";
-			}
+			state = ReplyState.NEXT;
+			reply = "220 " + clientSocket.getLocalAddress();
 			break;
-			
 		}
 		return reply;
 	}
