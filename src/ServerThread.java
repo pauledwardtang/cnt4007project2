@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 enum ReplyState
 {
-	AUTH, INIT, NEXT, DATA, QUIT, REDY, FORWARD, RETRIEVE
+	AUTH, INIT, NEXT, DATA, QUIT, REDY, FORWARD, RETRIEVE, EXIT, PRNT
 }
 enum SMTP_clientState  { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH ,DONE}
 
@@ -22,11 +22,11 @@ public class ServerThread extends Thread {
 	private ReplyState state;
 	private int currentRecipient;
 	private ArrayList<Account> clients;	
-	String SERVER1_IP = "10.128.83.19";
+	String SERVER1_IP = "10.128.83.134";
 	private SMTP_clientState clientState = SMTP_clientState.HELO;
 	String sender = null;
 	String recip = null;
-	String MIME = null;
+	String MIME = "";
 
 	public ServerThread(Socket socket) {
 		super("ServerThread");
@@ -102,7 +102,7 @@ public class ServerThread extends Thread {
 			else if(command.equals("QUIT"))
 			{
 				reply = QUIT + " " + socket.getLocalAddress() + " Email Sent.";
-				state = ReplyState.REDY;
+				state = ReplyState.FORWARD;
 			}
 			//incorrect code
 			else
@@ -116,13 +116,13 @@ public class ServerThread extends Thread {
 			if(message.equals("."))
 			{
 				reply = OK + " Message Accepted.";
-				System.out.println(MIME);
+				//System.out.println(MIME);
 				state = ReplyState.NEXT;
 				out.println(reply);
 			}		
 			else
 			{
-				MIME += message;
+				MIME += " " +  message + "\n";
 			}
 			break;
 		case AUTH:
@@ -173,6 +173,28 @@ public class ServerThread extends Thread {
 			{
 				state = ReplyState.AUTH;
 			}
+			else if(command.equals("PRNT")) //Print out mailbox of given client
+			{
+				String username;
+				String[] temp;
+				temp = message.split(": ");
+				username = temp[1];
+				//Find the client and print out his/her inbox
+	 			for (int i = 0 ; i < clients.size(); i++)
+	 			{
+	 				Account tempUsr = clients.get(i);
+	 				if(tempUsr.getUserName().equals(username))
+	 				{
+	 					System.out.println("------Test1------");
+	 					ArrayList<Account.Mail> inbox = tempUsr.getInbox();
+	 					 for(int j = 0; j < tempUsr.getInbox().size(); j++)
+	 					 {
+	 						 System.out.println(inbox.get(j).getMessage()+"\n");
+	 					 }
+	 					 break;
+	 				}
+	 			}
+			}
 			break;
 		case FORWARD:
 			boolean forwardEn = true;
@@ -181,6 +203,7 @@ public class ServerThread extends Thread {
  				Account temp = clients.get(i);
  				if(temp.getUserName().equals(recip))
  				{
+ 					System.out.println("------Test1------");
  					temp.addMail(MIME);
  					forwardEn = false;
  					break;
@@ -190,6 +213,7 @@ public class ServerThread extends Thread {
  			{
  				try
  				{
+ 					System.out.println("------Test2------");
 	 				Socket temp = new Socket(SERVER1_IP, 25);
 	 				PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), true);
 				    BufferedReader inReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -197,14 +221,13 @@ public class ServerThread extends Thread {
 	 				new ServerThread(temp).start();
 	 				out.println("SEND");
 	 				sendToServer(temp, outWriter, inReader);
-	 				
 	 				temp.close();
 	 				
  				}catch(IOException e){
  					System.out.println(e);
  				}
  			}
- 				
+ 			state = ReplyState.REDY;	
 			break;
 		}
 		return reply;
@@ -213,7 +236,7 @@ public class ServerThread extends Thread {
 	  *    Send a message to the server
 	  *
 	  */
-	void sendToServer(Socket clientSocket, PrintWriter out, BufferedReader inReader){
+	void sendToServer(Socket clientSocket, PrintWriter out, BufferedReader in){
 		
 	
 		String replyCode;
@@ -356,7 +379,7 @@ public class ServerThread extends Thread {
 					else if(fromClient != null)
 					{
 						messageFSM(fromClient, out, in);
-						System.out.println(fromClient);
+						//System.out.println(fromClient);
 					}
 				}
 			    //
