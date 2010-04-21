@@ -54,7 +54,7 @@ import java.io.PrintWriter;
 		inbox.remove(mailNum);
 	}
 	
-	private class Mail
+	public class Mail
 	 {
 		 public String message;
 		 public String subject;
