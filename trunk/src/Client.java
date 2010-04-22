@@ -17,13 +17,13 @@ import java.lang.Integer;
 
 	//Enumeration for SMTP State machine and menu options
 	private enum SMTP_State  { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH ,DONE}
-	private enum popState	 { INIT, LIST, USER_OPS, QUIT, EXIT}
+	private enum popState	 { INIT, LIST, USER_OPS, DELE, QUIT, EXIT}
 	private enum menuOptions { SEND, RECEIVE,GO_BACK, EXIT }
 	private enum emailOptions{ SAVE, DELETE, GO_BACK, EXIT }
 	
 	//IP Addresses for the servers
-	String SERVER1_IP = "10.128.83.134";
-	String SERVER2_IP = "10.128.83.134";
+	String SERVER1_IP = "10.128.82.93";
+	String SERVER2_IP = "10.128.82.93";
 
 	private Socket socket, authenticationSocket;
 	private String receiver_email_address, sender_email_address;
@@ -202,7 +202,7 @@ import java.lang.Integer;
 									
 									
 								case 2:
-									out.println("PRNT: " + userName);
+									out.println("PRNT: " + "markramasco");
 									popConnection();
 									break;
 								
@@ -376,7 +376,7 @@ import java.lang.Integer;
 					{
 					case INIT:	//Verify the initial TCP connection, send reply
 						System.out.println("**********STATE = CON**********");
-						if(replyCode.substring(0,3).equals("+OK"))
+						if(replyCode.substring(0,3).contains("+OK"))
 						{
 							out.println("list");
 							System.out.println("list");
@@ -390,13 +390,14 @@ import java.lang.Integer;
 						break;
 					
 					case LIST:	
+						System.out.println("**********STATE = LIST**********");
 						if(replyCode.equals("."))
 						{
 							pop = popState.USER_OPS;
 						}
 						else
 						{
-							System.out.println(replyCode);
+							//System.out.println(replyCode);
 						}
 						break;
 						
@@ -405,10 +406,10 @@ import java.lang.Integer;
 						String temp = printPOPOptions();
 						String[] usrOption = temp.split("\\s");
 						
-						if(usrOption[0].equals("QUIT"))
+						if(usrOption[0].equals("quit"))
 						{
-							out.println("QUIT");
 							pop = popState.QUIT;
+							out.println("quit");
 						}
 						else if(usrOption[0].equals("retr"))
 						{
@@ -417,12 +418,20 @@ import java.lang.Integer;
 						}
 						
 						else if(usrOption[0].equals("dele"))
+						{
 							out.println(temp);
+						}
 						break;
 						
+					case DELE:
+						System.out.println("**********STATE = DELE**********");
+						pop = popState.USER_OPS;
+						break;	
+						
 					case QUIT: //When to close ports?
-						if(!replyCode.substring(0,3).equals("+OK"))
-							System.out.println("ERROR, POP CONNECTION QUIT INCORRECTLY");
+						System.out.println("**********STATE = QUIT**********");
+						//if(!replyCode.substring(0,3).contains("+OK"))
+						//	System.out.println("ERROR, POP CONNECTION QUIT INCORRECTLY");
 						pop = popState.EXIT;
 						break;
 						
@@ -458,9 +467,9 @@ import java.lang.Integer;
 				case 2: System.out.print("Please type the ID of the message you would like to delete: ");
 						return ("dele " + Integer.parseInt(writer.readLine()));
 						
-				case 3: return "QUIT POP3";	
+				case 3: return "quit POP3";	
 			}
-			return "QUIT POP3";
+			return "quit POP3";
 		}
 	public static void main(String[] args)
 	{	

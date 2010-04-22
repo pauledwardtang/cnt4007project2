@@ -68,8 +68,6 @@ public class ServerThread extends Thread {
 		//reply code and message
 		String reply = null;
 		String command = null;
-
-		
 		
 		switch(state)
 		{
@@ -86,7 +84,6 @@ public class ServerThread extends Thread {
 			//Data section, change state machine to take in data till .
 			else if(command.equals("DATA"))
 			{
-				
 				state = ReplyState.DATA;
 				reply = DATA + " Enter email.";
 			}
@@ -186,8 +183,9 @@ public class ServerThread extends Thread {
 				String[] pop; 
 				pop = message.split("\\s");
 				user = pop[1];
-			    state = ReplyState.POP3;
+				state = ReplyState.POP3;
 				out.println("+OK " + "POP3 Started");
+
 			}
 			else if(command.equals("PRNT")) //Print out mailbox of given client
 			{
@@ -201,7 +199,6 @@ public class ServerThread extends Thread {
 	 			for (int i = 0 ; i < clients.size(); i++)
 	 			{
 	 				Account tempUsr = clients.get(i);
-	 				System.out.println("USER IS: " + username);
 	 				if(tempUsr.getUserName().equals(username))
 	 				{
 	 					ArrayList<Account.Mail> inbox = tempUsr.getInbox();
@@ -219,7 +216,6 @@ public class ServerThread extends Thread {
  			for (int i = 0 ; i < clients.size(); i++)
  			{
  				Account temp = clients.get(i);
- 				System.out.println("recip is:  " + recip);
  				if(temp.getUserName().equals(recip))
  				{
  					System.out.println("Local Email");
@@ -257,13 +253,20 @@ public class ServerThread extends Thread {
 	 				Account tempUsr = clients.get(i);
 	 				if(tempUsr.getUserName().equals(user))
 	 				{
-	 					ArrayList<Account.Mail> inbox = tempUsr.getInbox();
+						 String options = null;
+	 					 ArrayList<Account.Mail> inbox = tempUsr.getInbox();
 	 					 for(int j = 0; j < tempUsr.getInbox().size(); j++)
 	 					 {
-	 						 out.println(j + " " + inbox.get(j).subject);
+	 						// out.println(j + " " + inbox.get(j).subject);
+	 						options += j + " " + inbox.get(j).subject + " ";
+	 						//System.out.println("SIZE: " + tempUsr.getInbox().size());
 	 					 }
+	 					 out.print(options);
 	 				}
+	 				 out.println(".");
+	 				 break;
 	 			}
+	 			 
 			}
 			else if(command.equals("retr"))
 			{
@@ -276,9 +279,11 @@ public class ServerThread extends Thread {
 	 				{
 						ArrayList<Account.Mail> inbox = tempUsr.getInbox();
 						out.println(inbox.get(Integer.parseInt(index[1])).message);
+						out.println(".");
+						System.out.println("TEST");
 					}
 				}
-				
+			out.println(".");
 			}
 			else if(command.equals("dele"))
 			{
@@ -291,15 +296,15 @@ public class ServerThread extends Thread {
 	 				{
 						ArrayList<Account.Mail> inbox = tempUsr.getInbox();
 						inbox.remove(index[1]);
-						break;
 					}
 				}
 			}
 		    else if(command.equals("quit"))
 			{
-				out.println("+OK " + "POP signing off");
 				state = ReplyState.REDY;
+				out.println("+OK " + "POP signing off");
 			}
+
 		break;
 	}
 		return reply;
@@ -320,7 +325,6 @@ public class ServerThread extends Thread {
 			System.out.println(replyCode);
 			if(replyCode != null)
 			{
-				System.out.println(replyCode);
 				switch(clientState)
 				{
 				case HELO:	//Verify the initial TCP connection, send reply
@@ -389,7 +393,6 @@ public class ServerThread extends Thread {
 						clientState = SMTP_clientState.QUIT;
 						out.println(MIME);
 						out.println(".");
-						System.out.println(".");
 					}
 					else
 					{
@@ -452,7 +455,9 @@ public class ServerThread extends Thread {
 							
 					else if(fromClient != null)
 					{
-						messageFSM(fromClient, out, in);
+						String e =messageFSM(fromClient, out, in);
+						System.out.println(e);
+						//messageFSM(fromClient, out, in);
 					    System.out.println("-----" + state + "-----");
 					}
 				}
