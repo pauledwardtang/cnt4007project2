@@ -17,6 +17,7 @@ import java.lang.Integer;
 
 	//Enumeration for SMTP State machine and menu options
 	private enum SMTP_State  { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH ,DONE}
+	private enum popState	 { INIT, LIST, USER_OPS, QUIT, EXIT}
 	private enum menuOptions { SEND, RECEIVE,GO_BACK, EXIT }
 	private enum emailOptions{ SAVE, DELETE, GO_BACK, EXIT }
 	
@@ -31,11 +32,13 @@ import java.lang.Integer;
 	private String MIME;
 	private Random rand;
 	private String temp;
+	private String userName;
 	private boolean authFlag;
 
 	//Readers Writers
 
 	private BufferedReader in;
+	private BufferedReader writer;
 	private PrintWriter out;
 
 	private SMTP_State   state;
@@ -67,19 +70,16 @@ import java.lang.Integer;
 				if(Math.round(rand.nextFloat()) == 0) //Set IP to server 1
 				{
 					socket = new Socket(SERVER1_IP, 25);
-					System.out.println("making socket");
 					//authenticationSocket = new Socket(SERVER1_IP, 4444);
 				}
 				else
 				{
 					socket = new Socket(SERVER1_IP, 25);
-					System.out.println("making socket");
 					//authenticationSocket = new Socket(SERVER1_IP, 4444);
 				}
 					
 				//For testing purposes
-				System.out.println(socket.getRemoteSocketAddress());
-				//System.out.println(in.toString());
+				System.out.println("Connected to " + socket.getRemoteSocketAddress());
 			
 			// Creating readers/writers
 			in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -106,7 +106,7 @@ import java.lang.Integer;
 	 */
 	void getUserInput(){
 			//Buffered writer for reading input from user
-			String userName, authentication;
+			String  authentication;
 			String retryTemp;
 			boolean retry = false;
 			boolean showOptions = true;
@@ -117,15 +117,15 @@ import java.lang.Integer;
 			{
 				do
 				{
-					BufferedReader writer = new BufferedReader(new InputStreamReader(System.in));
+					writer = new BufferedReader(new InputStreamReader(System.in));
 					String replyCode;
 					
 			//***********Getting username and password********************
 					System.out.print("Username: ");
-					userName = writer.readLine() + " ";
+					userName = writer.readLine();
 					
 					System.out.print("Password: ");
-					authentication = userName + writer.readLine();
+					authentication = userName + " " + writer.readLine();
 					System.out.println();
 					
 					//Sending Authentication data to server
@@ -166,8 +166,8 @@ import java.lang.Integer;
 							System.out.println("****************OPTIONS*****************");
 							System.out.println("Press (1) to send an email\n" +
 											   "Press (2) to retrieve messages\n"+
-											   "Press (3) to return to authentication\n"+
-											   "Press (4) to exit.");
+											   "Press (3) to exit.\n" +
+											   "***************************************");
 							choice = Integer.parseInt(writer.readLine());
 							switch(choice)
 							{
@@ -203,20 +203,17 @@ import java.lang.Integer;
 									
 								case 2:
 									out.println("PRNT: " + userName);
+									popConnection();
 									break;
 								
 								case 3:
-									showOptions = false;
-									retry = true;
-									break;
-								
-								case 4:
 									showOptions = false;
 									break;
 								
 							}	
 							
 						}while(showOptions); 
+						socket.close();
 					}
 					
 		//***************Getting email**********************
@@ -236,7 +233,6 @@ import java.lang.Integer;
 		
 	
 		String replyCode;
-		
 		while(state != SMTP_State.DONE)
 		try
 		{
@@ -357,10 +353,120 @@ import java.lang.Integer;
 			System.out.println(e);
 		}	
 	}
-
-		public static void main(String[] args)
-		{	
-				Client test = new Client();
-				test.getUserInput();
+ /*
+	  *    Send a POP message to the server
+	  *
+	  */
+	void popConnection(){
+		
+	
+		String replyCode;
+		popState pop = popState.INIT;
+		out.println("POP3 " + userName);
+		
+		while(pop != popState.EXIT)
+		{
+			try
+			{
+				replyCode = in.readLine();
+				if(replyCode != null)
+				{
+					System.out.println(replyCode);
+					switch(pop)
+					{
+					case INIT:	//Verify the initial TCP connection, send reply
+						System.out.println("**********STATE = CON**********");
+						if(replyCode.substring(0,3).equals("+OK"))
+						{
+							out.println("list");
+							System.out.println("list");
+							pop = popState.USER_OPS;
+						}
+						else
+						{
+							System.out.println("Error in LIST response: \n" + replyCode);
+							pop = popState.EXIT;
+						}
+						break;
+					
+					case LIST:	
+						if(replyCode.equals("."))
+						{
+							pop = popState.USER_OPS;
+						}
+						else
+						{
+							System.out.println(replyCode);
+						}
+						break;
+						
+					case USER_OPS: //Send formatted message
+						System.out.println("**********STATE = USER_OPS**********");
+						String temp = printPOPOptions();
+						String[] usrOption = temp.split("\\s");
+						
+						if(usrOption[0].equals("QUIT"))
+						{
+							out.println("QUIT");
+							pop = popState.QUIT;
+						}
+						else if(usrOption[0].equals("retr"))
+						{
+							out.println(temp);
+							pop = popState.LIST;
+						}
+						
+						else if(usrOption[0].equals("dele"))
+							out.println(temp);
+						break;
+						
+					case QUIT: //When to close ports?
+						if(!replyCode.substring(0,3).equals("+OK"))
+							System.out.println("ERROR, POP CONNECTION QUIT INCORRECTLY");
+						pop = popState.EXIT;
+						break;
+						
+					case EXIT:
+						break;
+						
+					}
+				}
+			}catch(IOException e){
+				System.out.println(e);
+			}	
 		}
+	}
+		private String printPOPOptions() throws IOException
+		{
+			System.out.println("****************INBOX OPTIONS*****************");
+			System.out.println("Press (1) to read a message\n" +
+							   "Press (2) to delete a message\n"+
+							   "Press (3) to return to menu\n"+
+							   "**********************************************");
+			
+			int option = 3;
+			try{
+				option = Integer.parseInt(writer.readLine());
+			}catch(IOException e){
+				System.out.println(e);
+			}
+			switch(option)
+			{
+				case 1: System.out.print("Please type the ID of the message you would like to read: ");
+						return ("retr " + Integer.parseInt(writer.readLine()));
+						
+				case 2: System.out.print("Please type the ID of the message you would like to delete: ");
+						return ("dele " + Integer.parseInt(writer.readLine()));
+						
+				case 3: return "QUIT POP3";	
+			}
+			return "QUIT POP3";
+		}
+	public static void main(String[] args)
+	{	
+			Client test = new Client();
+			test.getUserInput();
+	}
 }
+
+
