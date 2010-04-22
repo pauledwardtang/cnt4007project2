@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 enum ReplyState
 {
-	AUTH, INIT, NEXT, DATA, QUIT, REDY, FORWARD, RETRIEVE, EXIT, PRNT
+	AUTH, INIT, NEXT, DATA, QUIT, REDY, FORWARD, RETRIEVE, EXIT, PRNT, POP3
 }
 enum SMTP_clientState  { HELO, MAIL, RCPT, DATA, MESSAGE, QUIT, FINISH ,DONE}
 
@@ -21,22 +21,22 @@ public class ServerThread extends Thread {
 	private boolean clientInput = true;
 	private ReplyState state;
 	private int currentRecipient;
-	private ArrayList<Account> clients;	
+	private ArrayList<Account> clients;
 	String SERVER1_IP = "10.128.83.134";
 	String SERVER2_IP = "10.128.82.93";
 	private SMTP_clientState clientState = SMTP_clientState.HELO;
 	String sender = null;
 	String recip = null;
 	String MIME = "";
+	String user = null;
 
-	public ServerThread(Socket socket) {
+	public ServerThread(Socket socket, ArrayList<Account> clients) {
 		super("ServerThread");
 		this.socket = socket;		
+		this.clients = clients;
+
 		
-		clients = new ArrayList<Account>();
-		clients.add(new Account("paultang", "sillyface"));
-		clients.add(new Account("markramasco", "sillyface"));
-		
+		System.out.println("Connected to: " + socket.getRemoteSocketAddress().toString());
 		if(socket.getRemoteSocketAddress().toString().contains(SERVER1_IP))
 				{
 					state = ReplyState.NEXT;
@@ -181,6 +181,14 @@ public class ServerThread extends Thread {
 			{
 				state = ReplyState.AUTH;
 			}
+			else if(command.equals("POP3"))
+			{
+				String[] pop; 
+				pop = message.split("\\s");
+				user = pop[1];
+			    state = ReplyState.POP3;
+				out.println("+OK " + "POP3 Started");
+			}
 			else if(command.equals("PRNT")) //Print out mailbox of given client
 			{
 				String username;
@@ -193,6 +201,7 @@ public class ServerThread extends Thread {
 	 			for (int i = 0 ; i < clients.size(); i++)
 	 			{
 	 				Account tempUsr = clients.get(i);
+	 				System.out.println("USER IS: " + username);
 	 				if(tempUsr.getUserName().equals(username))
 	 				{
 	 					ArrayList<Account.Mail> inbox = tempUsr.getInbox();
@@ -210,6 +219,7 @@ public class ServerThread extends Thread {
  			for (int i = 0 ; i < clients.size(); i++)
  			{
  				Account temp = clients.get(i);
+ 				System.out.println("recip is:  " + recip);
  				if(temp.getUserName().equals(recip))
  				{
  					System.out.println("Local Email");
@@ -224,9 +234,9 @@ public class ServerThread extends Thread {
  				{
  					System.out.println("Non Local Email");
 	 				Socket temp = new Socket(SERVER1_IP, 25);
-	 				PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), true);
-				    BufferedReader inReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-	 				new ServerThread(temp).start();
+	 				PrintWriter outWriter = new PrintWriter(temp.getOutputStream(), true);
+				    BufferedReader inReader = new BufferedReader(new InputStreamReader(temp.getInputStream()));
+	 				//new ServerThread(temp, clients).start();
 	 				//out.println("SEND");
 	 				sendToServer(temp, outWriter, inReader);
 	 				//temp.close();
@@ -235,9 +245,63 @@ public class ServerThread extends Thread {
  					System.out.println(e);
  				}
  			}
+ 			clientState = SMTP_clientState.HELO;
  			state = ReplyState.REDY;	
 			break;
-		}
+		case POP3:
+			command = message.substring(0, 4);
+			if(command.equals("list"))
+			{
+				for (int i = 0 ; i < clients.size(); i++)
+	 			{
+	 				Account tempUsr = clients.get(i);
+	 				if(tempUsr.getUserName().equals(user))
+	 				{
+	 					ArrayList<Account.Mail> inbox = tempUsr.getInbox();
+	 					 for(int j = 0; j < tempUsr.getInbox().size(); j++)
+	 					 {
+	 						 out.println(j + " " + inbox.get(j).subject);
+	 					 }
+	 				}
+	 			}
+			}
+			else if(command.equals("retr"))
+			{
+				String[] index;
+				index = message.split("\\s");
+				for (int i = 0 ; i < clients.size(); i++)
+	 			{
+	 				Account tempUsr = clients.get(i);
+	 				if(tempUsr.getUserName().equals(user))
+	 				{
+						ArrayList<Account.Mail> inbox = tempUsr.getInbox();
+						out.println(inbox.get(Integer.parseInt(index[1])).message);
+					}
+				}
+				
+			}
+			else if(command.equals("dele"))
+			{
+				String[] index;
+				index = message.split("\\s");
+				for (int i = 0 ; i < clients.size(); i++)
+	 			{
+	 				Account tempUsr = clients.get(i);
+	 				if(tempUsr.getUserName().equals(user))
+	 				{
+						ArrayList<Account.Mail> inbox = tempUsr.getInbox();
+						inbox.remove(index[1]);
+						break;
+					}
+				}
+			}
+		    else if(command.equals("quit"))
+			{
+				out.println("+OK " + "POP signing off");
+				state = ReplyState.REDY;
+			}
+		break;
+	}
 		return reply;
 	}
 	/*
@@ -382,19 +446,21 @@ public class ServerThread extends Thread {
 			   	//connection accepted message
 				while(!(state == ReplyState.QUIT))
 				{
-					String fromClient = in.readLine();				
+					String fromClient = in.readLine();		
+					System.out.println(fromClient);		
 					if(fromClient == null){}
 							
 					else if(fromClient != null)
 					{
 						messageFSM(fromClient, out, in);
-						//System.out.println(fromClient);
+					    System.out.println("-----" + state + "-----");
 					}
 				}
 			    //
 			} catch (IOException e) {
 			    e.printStackTrace();
 			}
+			
 
 		}
 	}
