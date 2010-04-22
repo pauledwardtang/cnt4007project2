@@ -23,6 +23,7 @@ public class ServerThread extends Thread {
 	private int currentRecipient;
 	private ArrayList<Account> clients;	
 	String SERVER1_IP = "10.128.83.134";
+	String SERVER2_IP = "10.128.82.93";
 	private SMTP_clientState clientState = SMTP_clientState.HELO;
 	String sender = null;
 	String recip = null;
@@ -36,10 +37,17 @@ public class ServerThread extends Thread {
 		clients.add(new Account("paultang", "sillyface"));
 		clients.add(new Account("markramasco", "sillyface"));
 		
-		if(socket.getRemoteSocketAddress().toString().equals(SERVER1_IP))
+		if(socket.getRemoteSocketAddress().toString().contains(SERVER1_IP))
 				{
-					out.println("220 " + socket.getLocalAddress());
 					state = ReplyState.NEXT;
+					PrintWriter out;
+					try {
+						out = new PrintWriter(socket.getOutputStream(), true);
+						out.println("220 " + socket.getLocalAddress());
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 				else
 				{
@@ -179,13 +187,14 @@ public class ServerThread extends Thread {
 				String[] temp;
 				temp = message.split(": ");
 				username = temp[1];
+				System.out.println(username);
+				System.out.println("Ready to print");
 				//Find the client and print out his/her inbox
 	 			for (int i = 0 ; i < clients.size(); i++)
 	 			{
 	 				Account tempUsr = clients.get(i);
 	 				if(tempUsr.getUserName().equals(username))
 	 				{
-	 					System.out.println("------Test1------");
 	 					ArrayList<Account.Mail> inbox = tempUsr.getInbox();
 	 					 for(int j = 0; j < tempUsr.getInbox().size(); j++)
 	 					 {
@@ -203,7 +212,7 @@ public class ServerThread extends Thread {
  				Account temp = clients.get(i);
  				if(temp.getUserName().equals(recip))
  				{
- 					System.out.println("------Test1------");
+ 					System.out.println("Local Email");
  					temp.addMail(MIME);
  					forwardEn = false;
  					break;
@@ -213,15 +222,14 @@ public class ServerThread extends Thread {
  			{
  				try
  				{
- 					System.out.println("------Test2------");
+ 					System.out.println("Non Local Email");
 	 				Socket temp = new Socket(SERVER1_IP, 25);
 	 				PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), true);
 				    BufferedReader inReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-				    
 	 				new ServerThread(temp).start();
-	 				out.println("SEND");
+	 				//out.println("SEND");
 	 				sendToServer(temp, outWriter, inReader);
-	 				temp.close();
+	 				//temp.close();
 	 				
  				}catch(IOException e){
  					System.out.println(e);
@@ -244,7 +252,8 @@ public class ServerThread extends Thread {
 		while(clientState != SMTP_clientState.DONE)
 		try
 		{
-			replyCode = in.readLine();
+		    replyCode = in.readLine();
+			System.out.println(replyCode);
 			if(replyCode != null)
 			{
 				System.out.println(replyCode);
@@ -387,7 +396,6 @@ public class ServerThread extends Thread {
 			    e.printStackTrace();
 			}
 
-			
 		}
 	}
 }
